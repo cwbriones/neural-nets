@@ -1,10 +1,10 @@
 #ifndef BASICNETWORK_H
 #define BASICNETWORK_H
 
+#include <Eigen/Dense>
 #include <vector>
 
-using Eigen::VectorXd;
-using Eigen::MatrixXd;
+using namespace Eigen;
 
 // Type representing an entry of training data.
 //
@@ -17,7 +17,7 @@ typedef std::vector<DataPair> Dataset;
 class BasicNetwork
 {
 public:
-    BasicNetwork(const std::vector<int>& sizes);
+    BasicNetwork(const std::vector<size_t>& sizes);
     VectorXd feed_forward(const VectorXd& input);
 
     /*
@@ -41,10 +41,10 @@ private:
     VectorXd cost_derivative(const VectorXd& output_activations, const VectorXd& y);
 
     const size_t num_layers_;
-    const std::vector<int> sizes_;
+    const std::vector<size_t> sizes_;
 
-    MatrixXd weights_;
-    MatrixXd biases_;
+    std::vector<MatrixXd> weights_;
+    std::vector<MatrixXd> biases_;
 };
 
 #endif
