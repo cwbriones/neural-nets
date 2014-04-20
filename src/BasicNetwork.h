@@ -40,8 +40,8 @@ private:
     DataPair back_propagation(const DataPair& training_example);
     VectorXd cost_derivative(const VectorXd& output_activations, const VectorXd& y);
 
-    const size_t num_layers_;
     const std::vector<size_t> sizes_;
+    const size_t num_layers_;
 
     std::vector<MatrixXd> weights_;
     std::vector<MatrixXd> biases_;
