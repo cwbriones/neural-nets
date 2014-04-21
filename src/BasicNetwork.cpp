@@ -1,6 +1,7 @@
 #include <iostream>
 #include <random>
 #include <algorithm>
+#include <cmath>
 
 #include "BasicNetwork.h"
 
@@ -33,7 +34,7 @@ BasicNetwork::BasicNetwork(const std::vector<size_t>& sizes) :
     }
 }
 
-void BasicNetwork::TrainSGD(const std::vector<DataPair>& training_data,
+void BasicNetwork::TrainSGD(std::vector<DataPair> training_data,
     const size_t epochs,
     const size_t mini_batch_size,
     const float  eta,
@@ -83,4 +84,23 @@ VectorXd BasicNetwork::cost_derivative(const VectorXd& output_activations,
 }
 
 void BasicNetwork::evaluate(std::vector<DataPair>& test_data) {
+}
+
+double BasicNetwork::sigmoid_func(double z) {
+    return 1/(1 + std::exp(-z));
+}
+
+VectorXd BasicNetwork::sigmoid_vec(const VectorXd& z) {
+    return z.unaryExpr([](double arg) { 
+        return BasicNetwork::sigmoid_func(arg);
+    });
+    return VectorXd(5);
+}
+
+VectorXd BasicNetwork::sigmoid_prime_vec(const VectorXd& z) {
+    return z.unaryExpr([](double arg) { 
+        double sigz = BasicNetwork::sigmoid_func(arg);
+        return -sigz/(1 - sigz);
+    });
+    return VectorXd(5);
 }

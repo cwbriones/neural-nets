@@ -18,7 +18,7 @@ class BasicNetwork
 {
 public:
     BasicNetwork(const std::vector<size_t>& sizes);
-    VectorXd feed_forward(const VectorXd& input);
+    VectorXd feed_forward(VectorXd input);
 
     /*
      * Trains the neural network using the given training data set
@@ -29,12 +29,16 @@ public:
      * eta - the learning rate
      * test_data - test data with which to show the progress of the training
      */
-    void TrainSGD(const std::vector<DataPair>& training_data, 
+    void TrainSGD(std::vector<DataPair> training_data, 
         const size_t epochs, 
         const size_t mini_batch_size, 
         const float  eta, 
         const  std::vector<DataPair>& test_data);
     void evaluate(std::vector<DataPair>& test_data);
+
+    static double sigmoid_func(double z);
+    static VectorXd sigmoid_vec(const VectorXd& z);
+    static VectorXd sigmoid_prime_vec(const VectorXd& z);
 private:
     void update_mini_batch(std::vector<DataPair>& mini_batch, const float eta);
     DataPair back_propagation(const DataPair& training_example);
