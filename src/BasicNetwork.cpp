@@ -18,7 +18,6 @@ BasicNetwork::BasicNetwork(const std::vector<size_t>& sizes) :
         
         // Initialize the weights and biases
         // to normally distributed values
-
         auto rand_normal = [](double val){
             static std::random_device rd;
             static std::mt19937_64 gen(rd());
@@ -70,7 +69,16 @@ void BasicNetwork::update_mini_batch(std::vector<DataPair>& mini_batch,
 
     for (auto& example : mini_batch) {
         auto delta_nabla = back_propagation(example);
+
+        auto delta_nabla_w = delta_nabla.first;
+        auto delta_nabla_b = delta_nabla.second;
+
+        nabla_w += delta_nabla_w;
+        nabla_b += delta_nabla_b;
     }
+
+    weights_ += weights_ - eta * nabla_w;
+    weights_ += biases_  - eta * nabla_b;
 }
 
 DataPair BasicNetwork::back_propagation(const DataPair& training_example) {
@@ -81,6 +89,13 @@ VectorXd BasicNetwork::cost_derivative(const VectorXd& output_activations,
     const VectorXd& y) {
 
     return output_activations - y;
+}
+
+VectorXd BasicNetwork::feed_foward(VectorXd a) {
+    for (int i = 0; i < weights_.size(); i++) {
+        a = sigmoid_vec(weights_[i].dot(a) + biases_[i]);
+    }
+    return a;
 }
 
 void BasicNetwork::evaluate(std::vector<DataPair>& test_data) {
@@ -94,7 +109,6 @@ VectorXd BasicNetwork::sigmoid_vec(const VectorXd& z) {
     return z.unaryExpr([](double arg) { 
         return BasicNetwork::sigmoid_func(arg);
     });
-    return VectorXd(5);
 }
 
 VectorXd BasicNetwork::sigmoid_prime_vec(const VectorXd& z) {
@@ -102,5 +116,4 @@ VectorXd BasicNetwork::sigmoid_prime_vec(const VectorXd& z) {
         double sigz = BasicNetwork::sigmoid_func(arg);
         return -sigz/(1 - sigz);
     });
-    return VectorXd(5);
 }
