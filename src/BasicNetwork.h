@@ -3,16 +3,9 @@
 
 #include <Eigen/Dense>
 #include <vector>
+#include "Util.h"
 
 using namespace Eigen;
-
-// Type representing an entry of training data.
-//
-// The first vector is the input to the network and the 
-// second vector is the desired output.
-typedef std::pair<VectorXd, VectorXd> DataPair;
-typedef std::vector<DataPair> Dataset;
-typedef std::vector<MatrixXd> MatrixList;
 
 // Implementation of a basic feed forward neural network
 class BasicNetwork
