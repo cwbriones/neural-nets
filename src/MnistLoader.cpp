@@ -4,11 +4,11 @@
 #include "MnistLoader.h"
 
 std::pair<Dataset, Dataset> MnistLoader::load() {
-    std::string training_path   = "../data/train-images-idx3-ubyte";
-    std::string training_labels = "../data/train-labels-idx1-ubyte";
+    std::string training_path   = "./data/train-images-idx3-ubyte";
+    std::string training_labels = "./data/train-labels-idx1-ubyte";
 
-    std::string test_path   = "../data/t10k-images-idx3-ubyte";
-    std::string test_labels = "../data/t10k-labels-idx1-ubyte";
+    std::string test_path   = "./data/t10k-images-idx3-ubyte";
+    std::string test_labels = "./data/t10k-labels-idx1-ubyte";
 
     std::cout << "Loading MNIST datasets." << std::endl;
     std::cout << "=======================" << std::endl;
