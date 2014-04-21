@@ -12,13 +12,13 @@ using namespace Eigen;
 // second vector is the desired output.
 typedef std::pair<VectorXd, VectorXd> DataPair;
 typedef std::vector<DataPair> Dataset;
+typedef std::vector<MatrixXd> MatrixList;
 
 // Implementation of a basic feed forward neural network
 class BasicNetwork
 {
 public:
     BasicNetwork(const std::vector<size_t>& sizes);
-    VectorXd feed_forward(VectorXd input);
 
     /*
      * Trains the neural network using the given training data set
@@ -35,20 +35,27 @@ public:
         const float  eta, 
         const  std::vector<DataPair>& test_data);
     void evaluate(std::vector<DataPair>& test_data);
+    VectorXd feed_forward(VectorXd a);
 
     static double sigmoid_func(double z);
     static VectorXd sigmoid_vec(const VectorXd& z);
     static VectorXd sigmoid_prime_vec(const VectorXd& z);
 private:
     void update_mini_batch(std::vector<DataPair>& mini_batch, const float eta);
-    DataPair back_propagation(const DataPair& training_example);
+
+    /*
+     * Computes the gradient using the back propagation algorithm.
+     * Returns:
+     *  A pair with first = nabla_w and second = nabla_b
+     */
+    std::pair<MatrixList, MatrixList> back_propagation(const DataPair& training_example);
     VectorXd cost_derivative(const VectorXd& output_activations, const VectorXd& y);
 
     const std::vector<size_t> sizes_;
     const size_t num_layers_;
 
-    std::vector<MatrixXd> weights_;
-    std::vector<MatrixXd> biases_;
+    MatrixList weights_;
+    MatrixList biases_;
 };
 
 #endif

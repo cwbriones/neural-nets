@@ -64,25 +64,36 @@ void BasicNetwork::TrainSGD(std::vector<DataPair> training_data,
 void BasicNetwork::update_mini_batch(std::vector<DataPair>& mini_batch,
     const float eta) {
 
-    std::vector<MatrixXd> nabla_w;
-    std::vector<MatrixXd> nabla_b;
+    // Initialize to matrices with 0s
+    MatrixList nabla_w(weights_);
+    MatrixList nabla_b(biases_);
+    std::for_each(nabla_w.begin(), nabla_w.end(), [](MatrixXd& mat){mat.setZero();});
+    std::for_each(nabla_b.begin(), nabla_b.end(), [](MatrixXd& mat){mat.setZero();});
 
+    // Compute the gradient by applying the back-propagation
+    // algorithm to each example in the mini batch and
+    // summing the resulting lists of matrices elementwise.
     for (auto& example : mini_batch) {
         auto delta_nabla = back_propagation(example);
 
         auto delta_nabla_w = delta_nabla.first;
         auto delta_nabla_b = delta_nabla.second;
 
-        nabla_w += delta_nabla_w;
-        nabla_b += delta_nabla_b;
+        for (int i = 0; i < num_layers_; ++i) {
+            nabla_w[i] += delta_nabla_w[i];
+            nabla_b[i] += delta_nabla_b[i];
+        }
     }
 
-    weights_ += weights_ - eta * nabla_w;
-    weights_ += biases_  - eta * nabla_b;
+    // Update the weights and biases based on the learning rate
+    for (int i = 0; i < num_layers_; ++i) {
+        weights_[i] -= eta * nabla_w[i];
+        biases_[i]  -= eta * nabla_b[i];
+    }
 }
 
-DataPair BasicNetwork::back_propagation(const DataPair& training_example) {
-    return training_example;
+std::pair<MatrixList, MatrixList> BasicNetwork::back_propagation(const DataPair& training_example) {
+    return std::make_pair(weights_, biases_);
 }
 
 VectorXd BasicNetwork::cost_derivative(const VectorXd& output_activations,
@@ -91,9 +102,9 @@ VectorXd BasicNetwork::cost_derivative(const VectorXd& output_activations,
     return output_activations - y;
 }
 
-VectorXd BasicNetwork::feed_foward(VectorXd a) {
+VectorXd BasicNetwork::feed_forward(VectorXd a) {
     for (int i = 0; i < weights_.size(); i++) {
-        a = sigmoid_vec(weights_[i].dot(a) + biases_[i]);
+        a = sigmoid_vec(weights_[i] * a + biases_[i]);
     }
     return a;
 }
