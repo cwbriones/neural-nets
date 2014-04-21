@@ -76,8 +76,8 @@ void BasicNetwork::update_mini_batch(std::vector<DataPair>& mini_batch,
     for (auto& example : mini_batch) {
         auto delta_nabla = back_propagation(example);
 
-        auto delta_nabla_w = delta_nabla.first;
-        auto delta_nabla_b = delta_nabla.second;
+        auto delta_nabla_b = delta_nabla.first;
+        auto delta_nabla_w = delta_nabla.second;
 
         for (int i = 0; i < num_layers_; ++i) {
             nabla_w[i] += delta_nabla_w[i];
@@ -93,7 +93,46 @@ void BasicNetwork::update_mini_batch(std::vector<DataPair>& mini_batch,
 }
 
 std::pair<MatrixList, MatrixList> BasicNetwork::back_propagation(const DataPair& training_example) {
-    return std::make_pair(weights_, biases_);
+    // Create empty matrix/vector for the gradient
+    auto nabla_b = biases_;
+    auto nabla_w = weights_;
+
+    std::for_each(nabla_w.begin(), nabla_w.end(), [](MatrixXd& mat){mat.setZero();});
+    std::for_each(nabla_b.begin(), nabla_b.end(), [](MatrixXd& mat){mat.setZero();});
+
+    // Feed forward to get the activations in each layer
+    VectorXd activation = training_example.first;
+
+    VectorList activations;
+    VectorList z_vectors;
+
+    activations.push_back(activation);
+
+    for (int i = 0; i < num_layers_; ++i) {
+        auto z = weights_[i] * activation + biases_[i];
+        z_vectors.push_back(z);
+        activation = sigmoid_vec(z);
+        activations.push_back(activation);
+    }
+
+    // Get initial error in final layer
+    VectorXd delta = cost_derivative(activations.back(), training_example.second) *\
+        sigmoid_prime_vec(z_vectors.back());
+    nabla_b.back() = delta;
+    nabla_w.back() = delta * activation.transpose();
+
+    // Backwards pass to get the error and gradient in each preceding layer
+    for (int i = num_layers_ - 2; i >= 0; --i) {
+        auto z = z_vectors[i];
+        auto spv = sigmoid_prime_vec(z);
+
+        delta = (weights_[i+1].transpose() * delta).cwiseProduct(spv);
+
+        nabla_b[i] = delta;
+        nabla_w[i] = delta * activations[i + 1].transpose();
+    }
+
+    return std::make_pair(nabla_b, nabla_w);
 }
 
 VectorXd BasicNetwork::cost_derivative(const VectorXd& output_activations,
