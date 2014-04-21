@@ -25,8 +25,8 @@ BasicNetwork::BasicNetwork(const std::vector<size_t>& sizes) :
 
             return d(gen);
         };
-        MatrixXd layer_weights = MatrixXd::Zero(x, y).unaryExpr(rand_normal);
-        MatrixXd layer_biases = MatrixXd::Zero(x, 1).unaryExpr(rand_normal);
+        MatrixXd layer_weights = MatrixXd::Zero(y, x).unaryExpr(rand_normal);
+        VectorXd layer_biases = VectorXd::Zero(y).unaryExpr(rand_normal);
 
         weights_.push_back(layer_weights);
         biases_.push_back(layer_biases);
@@ -42,6 +42,9 @@ void BasicNetwork::TrainSGD(std::vector<DataPair> training_data,
     int n_data = training_data.size();
 
     for (int i = 0; i < epochs; ++i) {
+        std::cout << "Begin Epoch " << i + 1 << std::endl;
+
+        std::cout << "Creating mini batches..." << std::endl;
         std::random_shuffle(training_data.begin(), training_data.end());
         std::vector<std::vector<DataPair>> mini_batches;
 
@@ -54,10 +57,10 @@ void BasicNetwork::TrainSGD(std::vector<DataPair> training_data,
             mini_batches.push_back(std::move(batch));
         }
 
+        std::cout << "Updating..." << std::endl;
         for (auto& mini_batch : mini_batches) {
             update_mini_batch(mini_batch, eta);
         }
-        std::cout << "Epoch " << i + 1 << std::endl;
     }
 }
 
@@ -80,14 +83,14 @@ void BasicNetwork::update_mini_batch(std::vector<DataPair>& mini_batch,
         auto delta_nabla_b = delta_nabla.first;
         auto delta_nabla_w = delta_nabla.second;
 
-        for (int i = 0; i < num_layers_; ++i) {
+        for (int i = 0; i < num_layers_ - 1; ++i) {
             nabla_b[i] += delta_nabla_b[i];
             nabla_w[i] += delta_nabla_w[i];
         }
     }
 
     // Update the weights and biases based on the learning rate
-    for (int i = 0; i < num_layers_; ++i) {
+    for (int i = 0; i < num_layers_ - 1; ++i) {
         biases_[i]  -= eta * nabla_b[i];
         weights_[i] -= eta * nabla_w[i];
     }
@@ -95,8 +98,8 @@ void BasicNetwork::update_mini_batch(std::vector<DataPair>& mini_batch,
 
 std::pair<MatrixList, MatrixList> BasicNetwork::back_propagation(const DataPair& training_example) {
     // Create empty matrix/vector for the gradient
-    auto nabla_b = biases_;
-    auto nabla_w = weights_;
+    auto nabla_b(biases_);
+    auto nabla_w(weights_);
 
     std::for_each(nabla_w.begin(), nabla_w.end(), [](MatrixXd& mat){mat.setZero();});
     std::for_each(nabla_b.begin(), nabla_b.end(), [](MatrixXd& mat){mat.setZero();});
@@ -109,28 +112,29 @@ std::pair<MatrixList, MatrixList> BasicNetwork::back_propagation(const DataPair&
 
     activations.push_back(activation);
 
-    for (int i = 0; i < num_layers_; ++i) {
+    for (int i = 0; i < num_layers_ - 1; ++i) {
         auto z = weights_[i] * activation + biases_[i];
+
         z_vectors.push_back(z);
         activation = sigmoid_vec(z);
         activations.push_back(activation);
     }
 
     // Get initial error in final layer
-    VectorXd delta = cost_derivative(activations.back(), training_example.second) *\
-        sigmoid_prime_vec(z_vectors.back());
+    VectorXd delta = cost_derivative(activations.back(), 
+        training_example.second).cwiseProduct(sigmoid_prime_vec(z_vectors.back()));
     nabla_b.back() = delta;
-    nabla_w.back() = delta * activation.transpose();
+    nabla_w.back() = delta * activations[activations.size() - 2].transpose();
 
     // Backwards pass to get the error and gradient in each preceding layer
-    for (int i = num_layers_ - 2; i >= 0; --i) {
-        auto z = z_vectors[i];
+    for (int i = num_layers_ - 2; i >= 1; --i) {
+        auto z = z_vectors[i-1];
         auto spv = sigmoid_prime_vec(z);
 
-        delta = (weights_[i+1].transpose() * delta).cwiseProduct(spv);
+        delta = (weights_[i].transpose() * delta).cwiseProduct(spv);
 
-        nabla_b[i] = delta;
-        nabla_w[i] = delta * activations[i + 1].transpose();
+        nabla_b[i-1] = delta;
+        nabla_w[i-1] = delta * activations[i-1].transpose();
     }
 
     return std::make_pair(nabla_b, nabla_w);
