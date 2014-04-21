@@ -65,10 +65,11 @@ void BasicNetwork::update_mini_batch(std::vector<DataPair>& mini_batch,
     const float eta) {
 
     // Initialize to matrices with 0s
-    MatrixList nabla_w(weights_);
     MatrixList nabla_b(biases_);
-    std::for_each(nabla_w.begin(), nabla_w.end(), [](MatrixXd& mat){mat.setZero();});
+    MatrixList nabla_w(weights_);
+
     std::for_each(nabla_b.begin(), nabla_b.end(), [](MatrixXd& mat){mat.setZero();});
+    std::for_each(nabla_w.begin(), nabla_w.end(), [](MatrixXd& mat){mat.setZero();});
 
     // Compute the gradient by applying the back-propagation
     // algorithm to each example in the mini batch and
@@ -80,15 +81,15 @@ void BasicNetwork::update_mini_batch(std::vector<DataPair>& mini_batch,
         auto delta_nabla_w = delta_nabla.second;
 
         for (int i = 0; i < num_layers_; ++i) {
-            nabla_w[i] += delta_nabla_w[i];
             nabla_b[i] += delta_nabla_b[i];
+            nabla_w[i] += delta_nabla_w[i];
         }
     }
 
     // Update the weights and biases based on the learning rate
     for (int i = 0; i < num_layers_; ++i) {
-        weights_[i] -= eta * nabla_w[i];
         biases_[i]  -= eta * nabla_b[i];
+        weights_[i] -= eta * nabla_w[i];
     }
 }
 
@@ -148,7 +149,29 @@ VectorXd BasicNetwork::feed_forward(VectorXd a) {
     return a;
 }
 
-void BasicNetwork::evaluate(std::vector<DataPair>& test_data) {
+size_t BasicNetwork::evaluate(std::vector<DataPair>& test_data) {
+
+    size_t examples_correct = 0;
+
+    for (auto& pair : test_data) {
+        auto input = pair.first;
+        auto label = pair.second;
+
+        bool result = false;
+        auto output = feed_forward(input);
+
+        double max_coefficient = output.maxCoeff();
+        for (int i = 0; i < output.size(); ++i) {
+            if (output(i) == max_coefficient) {
+                result = (label(i) == 1.0);
+                break;
+            }
+        }
+        if (result) {
+            examples_correct++;
+        }
+    }
+    return examples_correct;
 }
 
 double BasicNetwork::sigmoid_func(double z) {

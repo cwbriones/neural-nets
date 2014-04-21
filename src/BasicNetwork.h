@@ -27,7 +27,7 @@ public:
         const size_t mini_batch_size, 
         const float  eta, 
         const  std::vector<DataPair>& test_data);
-    void evaluate(std::vector<DataPair>& test_data);
+    size_t evaluate(std::vector<DataPair>& test_data);
     VectorXd feed_forward(VectorXd a);
 
     static double sigmoid_func(double z);
