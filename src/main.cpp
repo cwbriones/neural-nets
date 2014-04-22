@@ -3,6 +3,8 @@
 #include "BasicNetwork.h"
 #include "MnistLoader.h"
 
+using namespace Eigen;
+
 int main(int argc, const char *argv[])
 {
     MnistLoader data_loader;
@@ -13,7 +15,14 @@ int main(int argc, const char *argv[])
 
     BasicNetwork network({784, 30, 10});
 
-    network.TrainSGD(training_data, 30, 10, 0.3, test_data);
+    const int EPOCHS = 1;
+    const int MINI_BATCH_SIZE = 30;
+    const double ETA = 0.3;
 
+    network.TrainSGD(training_data, EPOCHS, MINI_BATCH_SIZE, ETA, test_data);
+    size_t num_correct = network.evaluate(test_data);
+
+    std::cout << "Accuracy after " << EPOCHS << " epochs: " 
+              << num_correct << "/" << test_data.size() << std::endl;
     return 0;
 }

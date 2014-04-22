@@ -28,13 +28,14 @@ public:
         const float  eta, 
         const  std::vector<DataPair>& test_data);
     size_t evaluate(std::vector<DataPair>& test_data);
+
     VectorXd feed_forward(VectorXd a);
 
     static double sigmoid_func(double z);
     static VectorXd sigmoid_vec(const VectorXd& z);
     static VectorXd sigmoid_prime_vec(const VectorXd& z);
 private:
-    void update_mini_batch(std::vector<DataPair>& mini_batch, const float eta);
+    void update_mini_batch(const std::vector<DataPair>& mini_batch, const float eta);
 
     /*
      * Computes the gradient using the back propagation algorithm.
