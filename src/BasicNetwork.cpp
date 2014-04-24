@@ -25,12 +25,19 @@ BasicNetwork::BasicNetwork(const std::vector<size_t>& sizes) :
 
             return d(gen);
         };
-        MatrixXd layer_weights = MatrixXd::Zero(y, x).unaryExpr(rand_normal);
         VectorXd layer_biases = VectorXd::Zero(y).unaryExpr(rand_normal);
+        MatrixXd layer_weights = MatrixXd::Zero(y, x).unaryExpr(rand_normal);
 
-        weights_.push_back(layer_weights);
         biases_.push_back(layer_biases);
+        weights_.push_back(layer_weights);
     }
+}
+
+VectorXd BasicNetwork::feed_forward(VectorXd a) {
+    for (int i = 0; i < weights_.size(); i++) {
+        a = sigmoid_vec(weights_[i] * a + biases_[i]);
+    }
+    return a;
 }
 
 void BasicNetwork::TrainSGD(std::vector<DataPair> training_data,
@@ -39,8 +46,10 @@ void BasicNetwork::TrainSGD(std::vector<DataPair> training_data,
     const float  eta,
     const  std::vector<DataPair>& test_data = {}) {
 
-    int n_data = training_data.size();
-    std::cout << "Beginning training with dataset size " << n_data << std::endl;
+    std::cout << "Beginning training with dataset size " << training_data.size() << std::endl;
+    std::cout << "Mini Batch size: " << mini_batch_size << std::endl;
+    std::cout << "ETA: " << eta << std::endl;
+    std::cout << "Epochs: " << epochs << std::endl;
 
     for (int i = 0; i < epochs; ++i) {
         std::cout << "Begin Epoch " << i + 1 << std::endl;
@@ -50,18 +59,21 @@ void BasicNetwork::TrainSGD(std::vector<DataPair> training_data,
         std::vector<std::vector<DataPair>> mini_batches;
 
         // Create the mini batches
-        for (int j = 0; j < n_data; j += mini_batch_size) {
+        for (int j = 0; j < training_data.size(); j += mini_batch_size) {
             std::vector<DataPair> batch;
-            for (int k = i; k < i + mini_batch_size; ++k) {
+            for (int k = j; k < j + mini_batch_size && k < training_data.size(); ++k) {
                 batch.push_back(training_data[k]);
             }
-            mini_batches.push_back(std::move(batch));
+            mini_batches.push_back(batch);
         }
 
-        std::cout << "Updating..." << std::endl;
+        std::cout << "Updating" << std::endl;
         for (auto& mini_batch : mini_batches) {
             update_mini_batch(mini_batch, eta);
         }
+
+        std::cout << std::endl;
+        std::cout << "Examples correct: " << evaluate(test_data) << "/" << test_data.size() << std::endl;
     }
 }
 
@@ -70,13 +82,12 @@ void BasicNetwork::update_mini_batch(const std::vector<DataPair>& mini_batch,
 
     // Initialize to matrices with 0s
     MatrixList nabla_b(biases_);
-    MatrixList nabla_w(weights_);
-
-    for (auto& mat : nabla_w) {
-        mat.setZero();
-    }
     for (auto& vec : nabla_b) {
         vec.setZero();
+    }
+    MatrixList nabla_w(weights_);
+    for (auto& mat : nabla_w) {
+        mat.setZero();
     }
 
     // Compute the gradient by applying the back-propagation
@@ -88,14 +99,14 @@ void BasicNetwork::update_mini_batch(const std::vector<DataPair>& mini_batch,
         auto delta_nabla_b = delta_nabla.first;
         auto delta_nabla_w = delta_nabla.second;
 
-        for (int i = 0; i < num_layers_ - 1; ++i) {
+        for (int i = 0; i < nabla_w.size(); ++i) {
             nabla_b[i] += delta_nabla_b[i];
             nabla_w[i] += delta_nabla_w[i];
         }
     }
 
     // Update the weights and biases based on the learning rate
-    for (int i = 0; i < num_layers_ - 1; ++i) {
+    for (int i = 0; i < weights_.size(); ++i) {
         biases_[i]  -= eta * nabla_b[i];
         weights_[i] -= eta * nabla_w[i];
     }
@@ -103,14 +114,14 @@ void BasicNetwork::update_mini_batch(const std::vector<DataPair>& mini_batch,
 
 std::pair<MatrixList, MatrixList> BasicNetwork::back_propagation(const DataPair& training_example) {
     // Create empty matrix/vector for the gradient
-    auto nabla_b(biases_);
-    auto nabla_w(weights_);
 
-    for (auto& mat : nabla_w) {
-        mat.setZero();
-    }
+    auto nabla_b(biases_);
     for (auto& vec : nabla_b) {
         vec.setZero();
+    }
+    auto nabla_w(weights_);
+    for (auto& mat : nabla_w) {
+        mat.setZero();
     }
 
     // Feed forward to get the activations in each layer
@@ -120,10 +131,10 @@ std::pair<MatrixList, MatrixList> BasicNetwork::back_propagation(const DataPair&
     VectorList z_vectors;
     activations.push_back(activation);
 
-    for (int i = 0; i < num_layers_ - 1; ++i) {
+    for (int i = 0; i < weights_.size(); ++i) {
         auto z = weights_[i] * activation + biases_[i];
-
         z_vectors.push_back(z);
+
         activation = sigmoid_vec(z);
         activations.push_back(activation);
     }
@@ -132,7 +143,7 @@ std::pair<MatrixList, MatrixList> BasicNetwork::back_propagation(const DataPair&
     VectorXd delta = cost_derivative(activations.back(), 
         training_example.second).cwiseProduct(sigmoid_prime_vec(z_vectors.back()));
     nabla_b.back() = delta;
-    nabla_w.back() = delta * activations[activations.size() - 2].transpose();
+    nabla_w.back() = delta * activations[num_layers_ - 2].transpose();
 
     // Backwards pass to get the error and gradient in each preceding layer
     for (int i = num_layers_ - 2; i >= 1; --i) {
@@ -145,59 +156,38 @@ std::pair<MatrixList, MatrixList> BasicNetwork::back_propagation(const DataPair&
         nabla_w[i-1] = delta * activations[i-1].transpose();
     }
 
-    return std::move(std::make_pair(std::move(nabla_b), std::move(nabla_w)));
+    return std::make_pair(nabla_b, nabla_w);
 }
 
 VectorXd BasicNetwork::cost_derivative(const VectorXd& output_activations,
     const VectorXd& y) {
 
-    return std::move(output_activations - y);
+    return output_activations - y;
 }
 
-VectorXd BasicNetwork::feed_forward(VectorXd a) {
-    for (int i = 0; i < weights_.size(); i++) {
-        a = sigmoid_vec(weights_[i] * a + biases_[i]);
-    }
-    return a;
-}
-
-size_t BasicNetwork::evaluate(std::vector<DataPair>& test_data) {
+size_t BasicNetwork::evaluate(const std::vector<DataPair>& test_data) {
 
     size_t examples_correct = 0;
+    
 
-    int count = 0;
-
-    std::cout << "Evaluating test_data of size " << test_data.size() << std::endl;
     for (auto& pair : test_data) {
         auto input = pair.first;
         auto label = pair.second;
 
         bool result = false;
-        VectorXd output = feed_forward(input);
 
-        double max_coefficient = output.maxCoeff();
-        for (int i = 0; i < output.size(); ++i) {
-            if (output(i) == max_coefficient) {
-                result = (label(i) == 1.0);
-                break;
-            }
-        }
-        if (result) {
+        MatrixXd::Index r, c;
+        feed_forward(input).maxCoeff(&r, &c);
+
+        if (label(r) > 0) {
             examples_correct++;
-        }
-
-        if (count < 2) {
-            std::cout << "Label:\n" << label << std::endl;
-            std::cout << "Guess:\n" << feed_forward(input) << std::endl;
-            std::cout << "Result: " << (result ? "Correct" : "Failed") << std::endl;
-            count++;
         }
     }
     return examples_correct;
 }
 
 double BasicNetwork::sigmoid_func(double z) {
-    return 1/(1 + std::exp(-z));
+    return 1.0/(1.0 + std::exp(-z));
 }
 
 VectorXd BasicNetwork::sigmoid_vec(const VectorXd& z) {
@@ -208,7 +198,7 @@ VectorXd BasicNetwork::sigmoid_vec(const VectorXd& z) {
 
 VectorXd BasicNetwork::sigmoid_prime_vec(const VectorXd& z) {
     return z.unaryExpr([](double arg) { 
-        double sigz = BasicNetwork::sigmoid_func(arg);
-        return -sigz/(1 - sigz);
+        double sigz = sigmoid_func(arg);
+        return sigz * (1.0 - sigz);
     });
 }

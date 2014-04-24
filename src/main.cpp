@@ -13,16 +13,12 @@ int main(int argc, const char *argv[])
     auto training_data = mnist_dataset.first;
     auto test_data = mnist_dataset.second;
 
-    BasicNetwork network({784, 30, 10});
+    BasicNetwork network({784, 20, 20, 10});
 
-    const int EPOCHS = 1;
-    const int MINI_BATCH_SIZE = 30;
+    const int EPOCHS = 30;
+    const int MINI_BATCH_SIZE = 10;
     const double ETA = 0.3;
 
     network.TrainSGD(training_data, EPOCHS, MINI_BATCH_SIZE, ETA, test_data);
-    size_t num_correct = network.evaluate(test_data);
-
-    std::cout << "Accuracy after " << EPOCHS << " epochs: " 
-              << num_correct << "/" << test_data.size() << std::endl;
     return 0;
 }
